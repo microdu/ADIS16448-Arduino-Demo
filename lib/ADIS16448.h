@@ -1,11 +1,14 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  January 2015
-//  By: Juan Jose Chong
+//  May 2015
+//  Author: Juan Jose Chong <juan.chong@analog.com>
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  ADIS16448.h
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
-//  This file interfaces the ADIS16448 IMU with an Arduino-based MCU.
+//  This library provides all the functions necessary to interface the ADIS16448 IMU with an 
+//  8-Bit Atmel-based Arduino development board. Functions for SPI configuration, reads and writes,
+//  and scaling are included. This library may be used for the entire ADIS164XX family of devices 
+//  with some modification.
 //
 //  This example is free software. You can redistribute it and/or modify it
 //  under the terms of the GNU Lesser Public License as published by the Free Software
@@ -17,8 +20,6 @@
 //
 //  You should have received a copy of the GNU Lesser Public License along with 
 //  this example.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  This library is based on the ADIS16480 library written by Daniel Tatum.
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -72,44 +73,42 @@
 #define SERIAL_NUM 0x58 //Lot-specific serial number
 
 
-// ADIS16448 class definition
+// ADIS16448 Class Definition
 class ADIS16448{
 
 public:
-  // Constructor with configurable CS, data ready, and HW reset pins
-
-  //ADIS16448(int CS, int DR, int RST, int MOSI, int MISO, int CLK);
+  //ADIS16448 Constructor (ChipSelect, DataReady, Reset Pins);
   ADIS16448(int CS, int DR, int RST);
 
   //Destructor
   ~ADIS16448();
 
-  //Performs hardware reset by sending pin 8 low on the DUT for 2 seconds
+  //Performs hardware reset 
   void resetDUT();
 
   //Sets SPI bit order, clock divider, and data mode
   void configSPI();
 
-  //Read sensor
-  int32_t regRead(uint8_t regAddr);
+  //Read register (two bytes)
+  int16_t regRead(uint8_t regAddr);
 
-  //Write register
+  //Write register (two bytes)
   void regWrite(uint8_t regAddr, uint16_t regData);
 
-  //Scale accelerator data
-  float accelScale(int32_t sensorData);
+  //Scale accelerometer data
+  float accelScale(int16_t sensorData);
 
   //Scale gyro data
-  float gyroScale(int32_t sensorData);
+  float gyroScale(int16_t sensorData);
 
   //Scale temperature data
-  float tempScale(int32_t sensorData);
+  float tempScale(int16_t sensorData);
 
-  //Scale pressure data
-  float pressureScale(int32_t sensorData);
+  //Scale barometer data
+  float pressureScale(int16_t sensorData);
 
   //Scale magnetometer data
-  float magnetometerScale(int32_t sensorData);
+  float magnetometerScale(int16_t sensorData);
 
 private:
   //Variables to store hardware pin assignments

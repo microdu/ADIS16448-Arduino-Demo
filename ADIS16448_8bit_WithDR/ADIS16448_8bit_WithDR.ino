@@ -1,15 +1,16 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  January 2015
-//  By: Juan Jose Chong
+//  May 2015
+//  Author: Juan Jose Chong <juan.chong@analog.com>
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  ADIS16448.ino
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
-//  This Arduino project interfaces with an ADIS16448 using SPI, reads IMU data, scales, and outputs
-/// data to a serial debug terminal (Putty).
+//  This Arduino project interfaces with an ADIS16448 using SPI and the accompanying C++ libraries, 
+//  reads IMU data in LSBs, scales the data, and outputs measurements to a serial debug terminal (putty) via
+//  via the onboard Arduino serial port (Putty).
 //
-//  This project has been tested on an Arduino Duemilanove, but should be compatible with any other
-//  8-Bit Arduino embedded platform.
+//  This project has been tested on an Arduino Duemilanove and Uno, but should be compatible with any other
+//  8-Bit Arduino embedded platform. 
 //
 //  This example is free software. You can redistribute it and/or modify it
 //  under the terms of the GNU Lesser Public License as published by the Free Software
@@ -22,13 +23,11 @@
 //  You should have received a copy of the GNU Lesser Public License along with 
 //  this example.  If not, see <http://www.gnu.org/licenses/>.
 //
-//  This library is based on the ADIS16480 library written by Daniel Tatum.
-//
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include <ADIS16448.h>
 #include <SPI.h>
 
-//Variable Declarations
+//Initialize Variables
 //Accelerometer
 int AX = 0;
 int AY = 0;
@@ -70,23 +69,24 @@ boolean NewData = false;
 //Green = DOUT(MISO) = 11
 //Yellow = DIN(MOSI) = 12
 //Brown = GND
-//Red = VCC
+//Red = VCC 3.3V!!
 
 //Call ADIS16448 Class
-ADIS16448 IMU(7,2,4); //CS,DR,RST
+ADIS16448 IMU(7,2,4); //CS,DR,RST Pin Assignments
 
 void setup()
 {
-  Serial.begin(115200);
+  Serial.begin(115200); // Initialize serial output via USB
+  IMU.configSPI();
   #ifdef DEBUG
     Serial.println("**********DEBUG MODE**********");
   #endif
-  delay(100); //Give the part time to start up
-  IMU.regWrite(MSC_CTRL,0x6);  //Enable Data Ready
+  delay(100); // Give the part time to start up
+  IMU.regWrite(MSC_CTRL,0x6);  // Enable Data Ready on IMU
   delay(100); 
-  IMU.regWrite(SENS_AVG,0x402); //Set Digital Filter
+  IMU.regWrite(SENS_AVG,0x402); // Set Digital Filter on IMU
   delay(100);
-  IMU.regWrite(SMPL_PRD,0x601), //Set Decimation
+  IMU.regWrite(SMPL_PRD,0x401), // Set Decimation on IMU
   delay(100);
   
   //Read the control registers once to print to screen
@@ -103,6 +103,7 @@ void grabData()
   //Put all the Data Registers you want to read here
   detachInterrupt(0);
   TEMP = 0;
+  IMU.configSPI();
   GX = IMU.regRead(XGYRO_OUT);
   GY = IMU.regRead(YGYRO_OUT);
   GZ = IMU.regRead(ZGYRO_OUT);

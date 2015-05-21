@@ -1,11 +1,14 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  January 2015
-//  By: Juan Jose Chong
+//  May 2015
+//  Author: Juan Jose Chong <juan.chong@analog.com>
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  ADIS16448.cpp
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
-//  This file interfaces the ADIS16448 IMU with an Arduino-based MCU.
+//  This library provides all the functions necessary to interface the ADIS16448 IMU with an 
+//  8-Bit Atmel-based Arduino development board. Functions for SPI configuration, reads and writes,
+//  and scaling are included. This library may be used for the entire ADIS164XX family of devices 
+//  with some modification.
 //
 //  This example is free software. You can redistribute it and/or modify it
 //  under the terms of the GNU Lesser Public License as published by the Free Software
@@ -17,8 +20,6 @@
 //
 //  You should have received a copy of the GNU Lesser Public License along with 
 //  this example.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  This library is based on the ADIS16480 library written by Daniel Tatum.
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -35,17 +36,11 @@ ADIS16448::ADIS16448(int CS, int DR, int RST) {
   _CS = CS;
   _DR = DR;
   _RST = RST;
-  #ifdef __SAM3X8E__
-    SPI.begin();
-    SPI.setBitOrder(MSBFIRST);
-    SPI.setClockDivider(10, 42); //For 2MHz
-    SPI.setDataMode(SPI_MODE3);
-  #else
-    SPI.begin(); //Initialize SPI bus
-    SPI.setBitOrder(MSBFIRST); //As per the ADIS16448 datasheet
-    SPI.setClockDivider(SPI_CLOCK_DIV8); //For 1MHz (max ~2MHz)
-    SPI.setDataMode(SPI_MODE3); //Clock base at one, sampled on falling edge
-  #endif
+
+  SPI.begin(); //Initialize SPI bus
+  SPI.setBitOrder(MSBFIRST); //As per the ADIS16448 datasheet
+  SPI.setClockDivider(SPI_CLOCK_DIV8); //For 1MHz (IMU Max ~2MHz)
+  SPI.setDataMode(SPI_MODE3); //Clock base at one, sampled on falling edge
 
 //Set default pin states
   pinMode(_CS, OUTPUT); // Set CS pin to be an output
@@ -64,7 +59,7 @@ ADIS16448::~ADIS16448() {
 }
 
 ////////////////////////////////////////////////////////////////////////////
-// Performs hardware reset by setting _RST pin low for 2 seconds.
+// Performs a hardware reset by setting _RST pin low for 2 seconds.
 ////////////////////////////////////////////////////////////////////////////
 void ADIS16448::resetDUT() {
   digitalWrite(_RST, LOW);
@@ -78,64 +73,38 @@ void ADIS16448::resetDUT() {
 // when there are multiple SPI devices using different settings.
 ////////////////////////////////////////////////////////////////////////////
 void ADIS16448::configSPI() {
-  #ifdef __SAM3X8E__
-    SPI.setBitOrder(MSBFIRST);
-    SPI.setClockDivider(10, 42); //For 2MHz
-    SPI.setDataMode(SPI_MODE3);
-  #else
-    SPI.setBitOrder(MSBFIRST); // for ADIS16448
-    SPI.setClockDivider(SPI_CLOCK_DIV8); // for 1MHz (ADIS16448 max 2MHz)
-    SPI.setDataMode(SPI_MODE3); // Clock base at one, sampled on falling edge
-  #endif
+  SPI.setBitOrder(MSBFIRST); // for ADIS16448
+  SPI.setClockDivider(SPI_CLOCK_DIV8); // for 1MHz (ADIS16448 max 2MHz)
+  SPI.setDataMode(SPI_MODE3); // Clock base at one, sampled on falling edge
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Reads two bytes (one word) in two sequential registers over SPI
 ////////////////////////////////////////////////////////////////////////////////////////////
-// regAddr - register address from the lookup table in ADIS16448.h
+// regAddr - address of register to be read
 // return - (int) signed 16 bit 2's complement number
 ////////////////////////////////////////////////////////////////////////////////////////////
-int32_t ADIS16448::regRead(uint8_t regAddr) {
+int16_t ADIS16448::regRead(uint8_t regAddr) {
 //Read registers using SPI
-#ifdef __SAM3X8E__
-  //SPI transfers for Arduino Due
-  configSPI();
-
-  // Write register address to be read
-  SPI.transfer(10, regAddr, SPI_CONTINUE); //write data over SPI bus
-  SPI.transfer(10, 0x00); //write 0x00 to the SPI bus fill the 16 bit requirement
-
-  delayMicroseconds(15); //delay to not violate readrate (40us)
-
-  // Read data from register requested
-  uint8_t _msbData = SPI.transfer(10, 0x00, SPI_CONTINUE); // send (0x00) and read SPI bus
-  uint8_t _lsbData = SPI.transfer(10, 0x00); // send dummy data and read
-
-  delayMicroseconds(15); //delay to not violate readrate (40us)
   
-  int32_t _dataOut = (_msbData << 8) | (_lsbData & 0xFF); //concatenate upper and lower bytes
-#else
-//SPI transfers for all other Arduinos
-  configSPI();
-
   // Write register address to be read
-  digitalWrite(_CS, LOW); //enable device
-  SPI.transfer(regAddr); //write data over SPI bus
-  SPI.transfer(0x00); //write 0x00 to the SPI bus fill the 16 bit requirement
-  digitalWrite(_CS, HIGH); //disable device
+  digitalWrite(_CS, LOW); // Set CS low to enable device
+  SPI.transfer(regAddr); // Write address over SPI bus
+  SPI.transfer(0x00); // Write 0x00 to the SPI bus fill the 16 bit transaction requirement
+  digitalWrite(_CS, HIGH); // Set CS high to disable device
 
-  delayMicroseconds(15); //delay to not violate readrate (40us)
+  delayMicroseconds(15); // Delay to not violate read rate (40us)
 
-  // Read data from register requested
-  digitalWrite(_CS, LOW); //enable device
-  uint8_t _msbData = SPI.transfer(0x00); // send (0x00) and read SPI bus
-  uint8_t _lsbData = SPI.transfer(0x00); // send dummy data and read
-  digitalWrite(_CS, HIGH); //disable device
+  // Read data from requested register
+  digitalWrite(_CS, LOW); // Set CS low to enable device
+  uint8_t _msbData = SPI.transfer(0x00); // Send (0x00) and place upper byte into variable
+  uint8_t _lsbData = SPI.transfer(0x00); // Send (0x00) and place lower byte into variable
+  digitalWrite(_CS, HIGH); // Set CS high to disable device
 
-  delayMicroseconds(15); //delay to not violate readrate (40us)
+  delayMicroseconds(15); // Delay to not violate read rate (40us)
   
-  int32_t _dataOut = (_msbData << 8) | (_lsbData & 0xFF); //concatenate upper and lower bytes
-#endif
+  int16_t _dataOut = (_msbData << 8) | (_lsbData & 0xFF); // Concatenate upper and lower bytes
+  // Shift MSB data left by 8 bits, mask LSB data with 0xFF, and OR both bits.
 
 #ifdef DEBUG 
   Serial.print("Register 0x");
@@ -150,45 +119,21 @@ int32_t ADIS16448::regRead(uint8_t regAddr) {
 ////////////////////////////////////////////////////////////////////////////
 // Writes one byte of data to the specified register over SPI
 ////////////////////////////////////////////////////////////////////////////
-// regAddr - register address from the lookup table
+// regAddr - address of register to be written
 // regData - data to be written to the register
 ////////////////////////////////////////////////////////////////////////////
 void ADIS16448::regWrite(uint8_t regAddr,uint16_t regData) {
-#ifdef __SAM3X8E__
-  configSPI();
+
   // Write register address and data
-  uint16_t addr = (((regAddr & 0x7F) | 0x80) << 8); //Check that the address is 7 bits, flip the sign bit
-  uint16_t lowWord = (addr | (regData & 0xFF));
-  uint16_t highWord = ((addr | 0x100) | ((regData >> 8) & 0xFF));
-  SPI.transfer(10, ((uint8_t)(lowWord >> 8)), SPI_CONTINUE);
-  SPI.transfer(10, ((uint8_t)lowWord));
-
-  delayMicroseconds(25);
-
-  SPI.transfer(10, ((uint8_t)(highWord >> 8)), SPI_CONTINUE);
-  SPI.transfer(10, ((uint8_t)highWord));
+  uint16_t addr = (((regAddr & 0x7F) | 0x80) << 8); // Toggle sign bit, and check that the address is 8 bits
+  uint16_t lowWord = (addr | (regData & 0xFF)); // OR Register address (A) with data(D) (AADD)
+  uint16_t highWord = ((addr | 0x100) | ((regData >> 8) & 0xFF)); //OR Register address with data and increment address
+  digitalWrite(_CS, LOW); // Set CS low to enable device
+  SPI.transfer((uint8_t)lowWord); // Write low byte over SPI bus
+  SPI.transfer((uint8_t)highWord); //Write high byte over SPI bus
+  digitalWrite(_CS, HIGH); // Set CS high to disable device
   
-  delayMicroseconds(40); //delay to not violate readrate (40us)
-#else
-  configSPI();
-  // Write register address and data
-  uint16_t addr = (((regAddr & 0x7F) | 0x80) << 8); //Check that the address is 7 bits, flip the sign bit
-  uint16_t lowWord = (addr | (regData & 0xFF));
-  uint16_t highWord = ((addr | 0x100) | ((regData >> 8) & 0xFF));
-  digitalWrite(_CS, LOW); 
-  SPI.transfer((uint8_t)(lowWord >> 8));
-  SPI.transfer((uint8_t)lowWord);
-  digitalWrite(_CS, HIGH);
-
-  delayMicroseconds(25);
-
-  digitalWrite(_CS, LOW); 
-  SPI.transfer((uint8_t)(highWord >> 8));
-  SPI.transfer((uint8_t)highWord);
-  digitalWrite(_CS, HIGH);
-  
-  delayMicroseconds(40); //delay to not violate readrate (40us)
-#endif
+  delayMicroseconds(25); //delay to not violate readrate (40us)
 
   #ifdef DEBUG
     Serial.print("Wrote 0x");
@@ -200,13 +145,13 @@ void ADIS16448::regWrite(uint8_t regAddr,uint16_t regData) {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
-// Converts accelerometer data output from the sensorRead() function and returns
+// Converts accelerometer data output from the regRead() function and returns
 // acceleration in g's
 /////////////////////////////////////////////////////////////////////////////////////////
-// sensorData - data output from sensorRead()
-// return - (float) signed/scaled accelerometer in G's
+// sensorData - data output from regRead()
+// return - (float) signed/scaled accelerometer in g's
 /////////////////////////////////////////////////////////////////////////////////////////
-float ADIS16448::accelScale(int32_t sensorData)
+float ADIS16448::accelScale(int16_t sensorData)
 {
   int signedData = 0;
   int isNeg = sensorData & 0x8000;
@@ -214,17 +159,17 @@ float ADIS16448::accelScale(int32_t sensorData)
     signedData = sensorData - 0xFFFF;
   else
     signedData = sensorData; // else return the raw number
-  float finalData = signedData * 0.000833; // multiply by accel sensitivity (250uG/LSB)
+  float finalData = signedData * 0.000833; // multiply by accel sensitivity (250 uG/LSB)
   return finalData;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-// Converts gyro data output from the sensorRead() function and returns gyro rate in deg/sec
+// Converts gyro data output from the regRead() function and returns gyro rate in deg/sec
 /////////////////////////////////////////////////////////////////////////////////////////////
-// sensorData - data output from sensorRead()
+// sensorData - data output from regRead()
 // return - (float) signed/scaled gyro in degrees/sec
 /////////////////////////////////////////////////////////////////////////////////////////
-float ADIS16448::gyroScale(int32_t sensorData)
+float ADIS16448::gyroScale(int16_t sensorData)
 {
   int signedData = 0;
   int isNeg = sensorData & 0x8000;
@@ -232,18 +177,18 @@ float ADIS16448::gyroScale(int32_t sensorData)
     signedData = sensorData - 0xFFFF;
   else
     signedData = sensorData;
-  float finalData = signedData * 0.04; //multiply by gyro sensitivity (0.005 LSB/dps)
+  float finalData = signedData * 0.04; //multiply by gyro sensitivity (0.005 dps/LSB)
   return finalData;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-// Converts temperature data output from the sensorRead() function and returns temperature 
+// Converts temperature data output from the regRead() function and returns temperature 
 // in degrees Celcius
 /////////////////////////////////////////////////////////////////////////////////////////////
-// sensorData - data output from sensorRead()
+// sensorData - data output from regRead()
 // return - (float) signed/scaled temperature in degrees Celcius
 /////////////////////////////////////////////////////////////////////////////////////////
-float ADIS16448::tempScale(int32_t sensorData)
+float ADIS16448::tempScale(int16_t sensorData)
 {
   int signedData = 0;
   int isNeg = sensorData & 0x8000;
@@ -256,12 +201,12 @@ float ADIS16448::tempScale(int32_t sensorData)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-// Converts barometer data output from sensorRead() function and returns pressure in bar
+// Converts barometer data output from regRead() function and returns pressure in bar
 /////////////////////////////////////////////////////////////////////////////////////////////
-// sensorData - data output from sensorRead()
-// return - (float) signed/scaled temperature in degrees Celcius
+// sensorData - data output from regRead()
+// return - (float) signed/scaled pressure in mBar
 /////////////////////////////////////////////////////////////////////////////////////////
-float ADIS16448::pressureScale(int32_t sensorData)
+float ADIS16448::pressureScale(int16_t sensorData)
 {
   int signedData = 0;
   int isNeg = sensorData & 0x8000;
@@ -269,18 +214,18 @@ float ADIS16448::pressureScale(int32_t sensorData)
     signedData = sensorData - 0xFFFF;
   else
     signedData = sensorData;
-  float finalData = (signedData * 0.02); //multiply by gyro sensitivity (0.005 LSB/dps)
+  float finalData = (signedData * 0.02); //multiply by gyro sensitivity (0.02 mBar/LSB)
   return finalData;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-// Converts magnetometer output from sensorRead() function and returns magnetic field
+// Converts magnetometer output from regRead() function and returns magnetic field
 // reading in Gauss
 /////////////////////////////////////////////////////////////////////////////////////////////
-// sensorData - data output from sensorRead()
-// return - (float) signed/scaled temperature in degrees Celcius
+// sensorData - data output from regRead()
+// return - (float) signed/scaled magnetometer data in mgauss
 /////////////////////////////////////////////////////////////////////////////////////////
-float ADIS16448::magnetometerScale(int32_t sensorData)
+float ADIS16448::magnetometerScale(int16_t sensorData)
 {
   int signedData = 0;
   int isNeg = sensorData & 0x8000;
@@ -288,6 +233,6 @@ float ADIS16448::magnetometerScale(int32_t sensorData)
     signedData = sensorData - 0xFFFF;
   else
     signedData = sensorData;
-  float finalData = (signedData * 0.0001429); //multiply by sensor resolution (142.9uGa LSB/dps)
+  float finalData = (signedData * 0.0001429); //multiply by sensor resolution (142.9 uGa/LSB)
   return finalData;
 }
