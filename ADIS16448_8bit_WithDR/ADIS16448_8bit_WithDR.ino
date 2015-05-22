@@ -7,7 +7,7 @@
 // 
 //  This Arduino project interfaces with an ADIS16448 using SPI and the accompanying C++ libraries, 
 //  reads IMU data in LSBs, scales the data, and outputs measurements to a serial debug terminal (putty) via
-//  via the onboard Arduino serial port (Putty).
+//  the onboard USB serial port.
 //
 //  This project has been tested on an Arduino Duemilanove and Uno, but should be compatible with any other
 //  8-Bit Arduino embedded platform. 
@@ -23,119 +23,107 @@
 //  You should have received a copy of the GNU Lesser Public License along with 
 //  this example.  If not, see <http://www.gnu.org/licenses/>.
 //
+//  Pinout for Arduino Uno/Diecimila/Duemilanove
+//  Gray = RST = 4
+//  Purple = SCLK = 13
+//  Blue = CS = 7
+//  Green = DOUT(MISO) = 11
+//  Yellow = DIN(MOSI) = 12
+//  Brown = GND
+//  Red = VCC [3.3V ONLY]
+//  White = DR = 2
+//
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include <ADIS16448.h>
 #include <SPI.h>
 
-//Initialize Variables
-//Accelerometer
+// Initialize Variables
+// Accelerometer
 int AX = 0;
 int AY = 0;
 int AZ = 0;
 float AXS = 0;
 float AYS = 0;
 float AZS = 0;
-//Gyro
+// Gyro
 int GX = 0;
 int GY = 0;
 int GZ = 0;
 float GXS = 0;
 float GYS = 0;
 float GZS = 0;
-//Magnetometer
+// Magnetometer
 int MX = 0;
 int MY = 0;
 int MZ = 0;
 float MXS = 0;
 float MYS = 0;
 float MZS = 0;
-//Barometer
+// Barometer
 int BAR = 0;
 float BARS = 0;
-//Control Registers
+// Control Registers
 int MSC = 0;
 int SENS = 0;
 int SMPL = 0;
-//Temperature
+// Temperature
 float TEMPS = 0;
 int TEMP = 0;
 
-boolean NewData = false;
+// Data Ready Flag
+boolean validData = false;
 
-//Pinout for Arduino Uno/Diecimila/Duemilanove
-//Gray = RST = 4
-//Purple = SCLK = 13
-//Blue = CS = 7
-//Green = DOUT(MISO) = 11
-//Yellow = DIN(MOSI) = 12
-//Brown = GND
-//Red = VCC 3.3V!!
-
-//Call ADIS16448 Class
-ADIS16448 IMU(7,2,4); //CS,DR,RST Pin Assignments
+// Call ADIS16448 Class
+ADIS16448 IMU(7,2,4); //ChipSelect,DataReady,Reset Pin Assignments
 
 void setup()
 {
   Serial.begin(115200); // Initialize serial output via USB
-  IMU.configSPI();
+  IMU.configSPI(); // Configure SPI communication
+  
   #ifdef DEBUG
     Serial.println("**********DEBUG MODE**********");
   #endif
+  
   delay(100); // Give the part time to start up
   IMU.regWrite(MSC_CTRL,0x6);  // Enable Data Ready on IMU
-  delay(100); 
-  IMU.regWrite(SENS_AVG,0x402); // Set Digital Filter on IMU
-  delay(100);
-  IMU.regWrite(SMPL_PRD,0x401), // Set Decimation on IMU
-  delay(100);
+  delay(20); 
+  IMU.regWrite(SENS_AVG,0x2); // Set Digital Filter on IMU
+  delay(20);
+  IMU.regWrite(SMPL_PRD,0x1), // Set Decimation on IMU
+  delay(20);
   
-  //Read the control registers once to print to screen
+  // Read the control registers once to print to screen
   MSC = IMU.regRead(MSC_CTRL);
   SENS = IMU.regRead(SENS_AVG);
   SMPL = IMU.regRead(SMPL_PRD);
   
-  attachInterrupt(0,grabData,LOW); //Attach interrupt
+  attachInterrupt(0, setDRFlag, RISING); // Attach interrupt to pin 2. Trigger on the rising edge
+  
 }
 
-//Interrupt-driven function used to grab register values and load them into variables
+// Function used to read register values via SPI and load them into variables in LSBs
 void grabData()
 {
-  //Put all the Data Registers you want to read here
-  detachInterrupt(0);
-  TEMP = 0;
-  IMU.configSPI();
-  GX = IMU.regRead(XGYRO_OUT);
-  GY = IMU.regRead(YGYRO_OUT);
-  GZ = IMU.regRead(ZGYRO_OUT);
-  AX = IMU.regRead(XACCL_OUT);
-  AY = IMU.regRead(YACCL_OUT);
-  AZ = IMU.regRead(ZACCL_OUT);
-  MX = IMU.regRead(XMAGN_OUT);
-  MY = IMU.regRead(YMAGN_OUT);
-  MZ = IMU.regRead(ZMAGN_OUT);
-  BAR = IMU.regRead(BARO_OUT);
-  TEMP = IMU.regRead(TEMP_OUT);
-  NewData = !NewData;
-  attachInterrupt(0,grabData,LOW);
+    // Put all the Data Registers you want to read here
+    TEMP = 0;
+    IMU.configSPI(); // Configure SPI before the read
+    GX = IMU.regRead(XGYRO_OUT);
+    GY = IMU.regRead(YGYRO_OUT);
+    GZ = IMU.regRead(ZGYRO_OUT);
+    AX = IMU.regRead(XACCL_OUT);
+    AY = IMU.regRead(YACCL_OUT);
+    AZ = IMU.regRead(ZACCL_OUT);
+    MX = IMU.regRead(XMAGN_OUT);
+    MY = IMU.regRead(YMAGN_OUT);
+    MZ = IMU.regRead(ZMAGN_OUT);
+    BAR = IMU.regRead(BARO_OUT);
+    TEMP = IMU.regRead(TEMP_OUT);
 }
 
-//Scale and display registers read using the interrupt
-void loop()
+// Function used to scale all acquired data (scaling functions are included in ADIS16448.cpp)
+void scaleData()
 {
-  //Print Control Registers
-  Serial.println("Control Registers");
-  Serial.print("MSC_CTRL: ");
-  Serial.println((unsigned char)MSC,HEX);
-  Serial.print("SENS_AVG: ");
-  Serial.println((unsigned char)SENS,HEX);
-  Serial.print("SMPL_PRD: ");
-  Serial.println((unsigned char)SMPL,HEX);
-  Serial.println(" ");
-  Serial.println("Data Registers");
-  
-  //If interrupt has fired and updated the registers with new data, scale the data and set the NewData flag
-  if (NewData == true){
-    detachInterrupt(0); //Detatch interrupt while writing to the screen
     GXS = IMU.gyroScale(GX); //Scale X Gyro
     GYS = IMU.gyroScale(GY); //Scale Y Gyro
     GZS = IMU.gyroScale(GZ); //Scale Z Gyro
@@ -147,46 +135,71 @@ void loop()
     MZS = IMU.magnetometerScale(MZ); //Scale Z Magnetometer
     BARS = IMU.pressureScale(BAR); //Scale Barometer
     TEMPS = IMU.tempScale(TEMP); //Scale Temp Sensor
-    NewData = !NewData;  //Set New Data Flag
-  }
-  //Print Gyro Data
-  Serial.print("XGYRO: ");
-  Serial.println(GXS);
-  Serial.print("YGYRO: ");
-  Serial.println(GYS);
-  Serial.print("ZGYRO: ");
-  Serial.println(GZS);
+}
 
-  //Print Accel Data
-  Serial.print("XACCL: ");
-  Serial.println(AXS);
-  Serial.print("YACCL: ");
-  Serial.println(AYS);
-  Serial.print("ZACCL: ");
-  Serial.println(AZS);
+// Data Ready Interrupt Routine
+void setDRFlag()
+{
+  validData = !validData;
+}
+
+// Main loop. Scale and display registers read using the interrupt
+void loop()
+{
+  if (validData) // If data present in the ADIS16448 registers is valid...
+  {
+    grabData(); // Grab data from the IMU
+    
+    scaleData(); // Scale data acquired from the IMU
+    
+    //Print control registers to the serial port
+    Serial.println("Control Registers");
+    Serial.print("MSC_CTRL: ");
+    Serial.println((unsigned char)MSC,HEX);
+    Serial.print("SENS_AVG: ");
+    Serial.println((unsigned char)SENS,HEX);
+    Serial.print("SMPL_PRD: ");
+    Serial.println((unsigned char)SMPL,HEX);
+    Serial.println(" ");
+    Serial.println("Data Registers");
+    
+    //Print scaled gyro data
+    Serial.print("XGYRO: ");
+    Serial.println(GXS);
+    Serial.print("YGYRO: ");
+    Serial.println(GYS);
+    Serial.print("ZGYRO: ");
+    Serial.println(GZS);
   
-  //Print Magnetometer Data
-  Serial.print("XMAG: ");
-  Serial.println(MXS);
-  Serial.print("YMAG: ");
-  Serial.println(MYS);
-  Serial.print("ZMAG: ");
-  Serial.println(MZS);
-  
-  //Print Barometer Data
-  Serial.print("BAR: ");
-  Serial.println(BARS);
- 
-  //Print Temp Data
-  Serial.print("TEMP: ");
-  Serial.println(TEMPS);
-  
-  attachInterrupt(0,grabData,LOW);
- 
-  delay(100);
-  
-  //Clear serial out and reset cursor
-  //Only works on supported serial terminal programs (Putty)
-  Serial.print("\033[2J");
-  Serial.print("\033[H");
+    //Print scaled accel data
+    Serial.print("XACCL: ");
+    Serial.println(AXS);
+    Serial.print("YACCL: ");
+    Serial.println(AYS);
+    Serial.print("ZACCL: ");
+    Serial.println(AZS);
+    
+    //Print scaled magnetometer data
+    Serial.print("XMAG: ");
+    Serial.println(MXS);
+    Serial.print("YMAG: ");
+    Serial.println(MYS);
+    Serial.print("ZMAG: ");
+    Serial.println(MZS);
+    
+    //Print scaled barometer data
+    Serial.print("BAR: ");
+    Serial.println(BARS);
+   
+    //Print scaled temp data
+    Serial.print("TEMP: ");
+    Serial.println(TEMPS);
+   
+    delay(150); // Give the user time to read the data
+    
+    //Clear the serial terminal and reset cursor
+    //Only works on supported serial terminal programs (Putty)
+    Serial.print("\033[2J");
+    Serial.print("\033[H");
+  }
 }
