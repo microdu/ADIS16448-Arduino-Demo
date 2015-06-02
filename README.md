@@ -10,5 +10,6 @@ More information on the hardware and IDE can be found below:
 - [ADIS16448](http://www.analog.com/media/en/technical-documentation/data-sheets/ADIS16448.pdf) - Compact, Precision Ten Degrees of Freedom Inertial Sensor
 - [Arduino](http://www.arduino.cc/en/Main/Software) - Open-source IDE
 - [Arduino Uno](http://www.arduino.cc/en/Main/ArduinoBoardUno) - ATmega328-based Development Board
+- [PuTTY](http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html) - Telnet and SSH for Windows and Unix Platforms
 
 A hardware setup guide will be made available at a later date.
