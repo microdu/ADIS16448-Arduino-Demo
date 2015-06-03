@@ -37,10 +37,8 @@ ADIS16448::ADIS16448(int CS, int DR, int RST) {
   _DR = DR;
   _RST = RST;
 
-  SPI.begin(); //Initialize SPI bus
-  SPI.setBitOrder(MSBFIRST); //As per the ADIS16448 datasheet
-  SPI.setClockDivider(SPI_CLOCK_DIV8); //For 1MHz (IMU Max ~2MHz)
-  SPI.setDataMode(SPI_MODE3); //Clock base at one, sampled on falling edge
+  SPI.begin(); // Initialize SPI bus
+  configSPI(); // Configure SPI
 
 //Set default pin states
   pinMode(_CS, OUTPUT); // Set CS pin to be an output
@@ -59,23 +57,26 @@ ADIS16448::~ADIS16448() {
 }
 
 ////////////////////////////////////////////////////////////////////////////
-// Performs a hardware reset by setting _RST pin low for 2 seconds.
+// Performs a hardware reset by setting _RST pin low for delay (in ms).
 ////////////////////////////////////////////////////////////////////////////
-void ADIS16448::resetDUT() {
+int ADIS16448::resetDUT(uint8_t ms) {
   digitalWrite(_RST, LOW);
   delay(100);
   digitalWrite(_RST, HIGH);
-  delay(2000);
+  delay(ms);
+  return(1);
 }
 
 ////////////////////////////////////////////////////////////////////////////
 // Sets SPI bit order, clock divider, and data mode. This function is useful
 // when there are multiple SPI devices using different settings.
+// Returns 1 when complete.
 ////////////////////////////////////////////////////////////////////////////
-void ADIS16448::configSPI() {
-  SPI.setBitOrder(MSBFIRST); // for ADIS16448
-  SPI.setClockDivider(SPI_CLOCK_DIV8); // for 1MHz (ADIS16448 max 2MHz)
+int ADIS16448::configSPI() {
+  SPI.setBitOrder(MSBFIRST); // Per the datasheet
+  SPI.setClockDivider(SPI_CLOCK_DIV8); // Config for  1MHz (ADIS16448 max 2MHz)
   SPI.setDataMode(SPI_MODE3); // Clock base at one, sampled on falling edge
+  return(1);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -117,23 +118,24 @@ int16_t ADIS16448::regRead(uint8_t regAddr) {
 }
 
 ////////////////////////////////////////////////////////////////////////////
-// Writes one byte of data to the specified register over SPI
+// Writes one byte of data to the specified register over SPI.
+// Returns 1 when complete.
 ////////////////////////////////////////////////////////////////////////////
 // regAddr - address of register to be written
 // regData - data to be written to the register
 ////////////////////////////////////////////////////////////////////////////
-void ADIS16448::regWrite(uint8_t regAddr,uint16_t regData) {
+int ADIS16448::regWrite(uint8_t regAddr,uint16_t regData) {
 
   // Write register address and data
   uint16_t addr = (((regAddr & 0x7F) | 0x80) << 8); // Toggle sign bit, and check that the address is 8 bits
   uint16_t lowWord = (addr | (regData & 0xFF)); // OR Register address (A) with data(D) (AADD)
-  uint16_t highWord = ((addr | 0x100) | ((regData >> 8) & 0xFF)); //OR Register address with data and increment address
+  uint16_t highWord = ((addr | 0x100) | ((regData >> 8) & 0xFF)); // OR Register address with data and increment address
   digitalWrite(_CS, LOW); // Set CS low to enable device
   SPI.transfer((uint8_t)lowWord); // Write low byte over SPI bus
   SPI.transfer((uint8_t)highWord); //Write high byte over SPI bus
   digitalWrite(_CS, HIGH); // Set CS high to disable device
   
-  delayMicroseconds(25); //delay to not violate readrate (40us)
+  delayMicroseconds(25); // Delay to not violate read rate (40us)
 
   #ifdef DEBUG
     Serial.print("Wrote 0x");
@@ -142,6 +144,7 @@ void ADIS16448::regWrite(uint8_t regAddr,uint16_t regData) {
     Serial.print((unsigned char)regAddr, HEX);
   #endif
 
+  return(1);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -155,11 +158,11 @@ float ADIS16448::accelScale(int16_t sensorData)
 {
   int signedData = 0;
   int isNeg = sensorData & 0x8000;
-  if (isNeg == 0x8000) //if the number is negative, scale and sign the output
+  if (isNeg == 0x8000) // If the number is negative, scale and sign the output
     signedData = sensorData - 0xFFFF;
   else
-    signedData = sensorData; // else return the raw number
-  float finalData = signedData * 0.000833; // multiply by accel sensitivity (250 uG/LSB)
+    signedData = sensorData; // Else return the raw number
+  float finalData = signedData * 0.000833; // Multiply by accel sensitivity (250 uG/LSB)
   return finalData;
 }
 
@@ -173,11 +176,11 @@ float ADIS16448::gyroScale(int16_t sensorData)
 {
   int signedData = 0;
   int isNeg = sensorData & 0x8000;
-  if (isNeg == 0x8000) //if the number is negative, scale and sign the output
+  if (isNeg == 0x8000) // If the number is negative, scale and sign the output
     signedData = sensorData - 0xFFFF;
   else
     signedData = sensorData;
-  float finalData = signedData * 0.04; //multiply by gyro sensitivity (0.005 dps/LSB)
+  float finalData = signedData * 0.04; // Multiply by gyro sensitivity (0.005 dps/LSB)
   return finalData;
 }
 
@@ -192,11 +195,11 @@ float ADIS16448::tempScale(int16_t sensorData)
 {
   int signedData = 0;
   int isNeg = sensorData & 0x8000;
-  if (isNeg == 0x8000) //if the number is negative, scale and sign the output
+  if (isNeg == 0x8000) // If the number is negative, scale and sign the output
     signedData = sensorData - 0xFFFF;
   else
     signedData = sensorData;
-  float finalData = (signedData * 0.07386) + 31; //multiply by temperature scale and add 31 to equal 0x0000
+  float finalData = (signedData * 0.07386) + 31; // Multiply by temperature scale and add 31 to equal 0x0000
   return finalData;
 }
 
@@ -210,11 +213,11 @@ float ADIS16448::pressureScale(int16_t sensorData)
 {
   int signedData = 0;
   int isNeg = sensorData & 0x8000;
-  if (isNeg == 0x8000) //if the number is negative, scale and sign the output
+  if (isNeg == 0x8000) // If the number is negative, scale and sign the output
     signedData = sensorData - 0xFFFF;
   else
     signedData = sensorData;
-  float finalData = (signedData * 0.02); //multiply by gyro sensitivity (0.02 mBar/LSB)
+  float finalData = (signedData * 0.02); // Multiply by barometer sensitivity (0.02 mBar/LSB)
   return finalData;
 }
 
@@ -229,10 +232,10 @@ float ADIS16448::magnetometerScale(int16_t sensorData)
 {
   int signedData = 0;
   int isNeg = sensorData & 0x8000;
-  if (isNeg == 0x8000) //if the number is negative, scale and sign the output
+  if (isNeg == 0x8000) // If the number is negative, scale and sign the output
     signedData = sensorData - 0xFFFF;
   else
     signedData = sensorData;
-  float finalData = (signedData * 0.0001429); //multiply by sensor resolution (142.9 uGa/LSB)
+  float finalData = (signedData * 0.0001429); // Multiply by sensor resolution (142.9 uGa/LSB)
   return finalData;
 }
