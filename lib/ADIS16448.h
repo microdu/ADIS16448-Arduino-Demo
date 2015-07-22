@@ -93,8 +93,10 @@ public:
   //Read register (two bytes) Returns signed 16 bit data.
   int16_t regRead(uint8_t regAddr);
 
+  int16_t * sensorRead();
+
   //Write register (two bytes). Returns 1 when complete.
-  int regWrite(uint8_t regAddr, uint16_t regData);
+  int regWrite(uint8_t regAddr, int16_t regData);
 
   //Scale accelerometer data. Returns scaled data as float.
   float accelScale(int16_t sensorData);
