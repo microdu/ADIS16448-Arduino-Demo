@@ -85,23 +85,23 @@ void grabData()
   }
   // Print data to serial port **Requires the use of printf()**
   // See: http://playground.arduino.cc/Main/Printf
-  Serial.printf("%3X",intData[3]);
+  Serial.printf("%3X",intData[3]); //XACCEL
   Serial.printf(",");
-  Serial.printf("%3X",intData[4]);
+  Serial.printf("%3X",intData[4]); //YACCEL
   Serial.printf(",");
-  Serial.printf("%3X",intData[5]);
+  Serial.printf("%3X",intData[5]); //ZACCEL
   Serial.printf(",");
-  Serial.printf("%3X",intData[0]);
+  Serial.printf("%3X",intData[0]); //XGYRO
   Serial.printf(",");
-  Serial.printf("%3X",intData[1]);
+  Serial.printf("%3X",intData[1]); //YGYRO
   Serial.printf(",");
-  Serial.printf("%3X",intData[2]);
+  Serial.printf("%3X",intData[2]); //ZGYRO
   Serial.printf(",");
-  Serial.printf("%3X",intData[6]);
+  Serial.printf("%3X",intData[6]); //XMAG
   Serial.printf(",");
-  Serial.printf("%3X",intData[7]);
+  Serial.printf("%3X",intData[7]); //YMAG
   Serial.printf(",");
-  Serial.printf("%3X",intData[8]);
+  Serial.printf("%3X",intData[8]); //ZMAG
   Serial.println(" ");
 }
 
@@ -122,23 +122,23 @@ void grabData()
   }
   
   // Print data to serial port
-  Serial.print(scaledData[3]);
+  Serial.print(scaledData[3]); //XACCEL
   Serial.print(",");
-  Serial.print(scaledData[4]);
+  Serial.print(scaledData[4]); //YACCEL
   Serial.print(",");
-  Serial.print(scaledData[5]);
+  Serial.print(scaledData[5]); //ZACCEL
   Serial.print(",");
-  Serial.print(scaledData[0]);
+  Serial.print(scaledData[0]); //XGYRO
   Serial.print(",");
-  Serial.print(scaledData[1]);
+  Serial.print(scaledData[1]); //YGYRO
   Serial.print(",");
-  Serial.print(scaledData[2]);
+  Serial.print(scaledData[2]); //ZGYRO
   Serial.print(",");
-  Serial.print(scaledData[6]);
+  Serial.print(scaledData[6]); //XMAG
   Serial.print(",");
-  Serial.print(scaledData[7]);
+  Serial.print(scaledData[7]); //YMAG
   Serial.print(",");
-  Serial.print(scaledData[8]);
+  Serial.print(scaledData[8]); //ZMAG
   Serial.println(" ");
 }
 
