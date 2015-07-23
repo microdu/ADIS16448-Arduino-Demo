@@ -28,9 +28,6 @@
 #include "Arduino.h"
 #include <SPI.h>
 
-// Uncomment for DEBUG mode
-//#define DEBUG 
-
 // User Register Memory Map from Table 6
 #define FLASH_CNT 0x00  //Flash memory write count
 #define XGYRO_OUT 0x04  //X-axis gyroscope output

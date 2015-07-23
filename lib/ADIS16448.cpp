@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  May 2015
+//  July 2015
 //  Author: Juan Jose Chong <juan.chong@analog.com>
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  ADIS16448.cpp
@@ -94,7 +94,7 @@ int16_t ADIS16448::regRead(uint8_t regAddr) {
   SPI.transfer(0x00); // Write 0x00 to the SPI bus fill the 16 bit transaction requirement
   digitalWrite(_CS, HIGH); // Set CS high to disable device
 
-  delayMicroseconds(15); // Delay to not violate read rate (40us)
+  delayMicroseconds(25); // Delay to not violate read rate (40us)
 
   // Read data from requested register
   digitalWrite(_CS, LOW); // Set CS low to enable device
@@ -102,17 +102,10 @@ int16_t ADIS16448::regRead(uint8_t regAddr) {
   uint8_t _lsbData = SPI.transfer(0x00); // Send (0x00) and place lower byte into variable
   digitalWrite(_CS, HIGH); // Set CS high to disable device
 
-  delayMicroseconds(15); // Delay to not violate read rate (40us)
+  delayMicroseconds(25); // Delay to not violate read rate (40us)
   
   int16_t _dataOut = (_msbData << 8) | (_lsbData & 0xFF); // Concatenate upper and lower bytes
   // Shift MSB data left by 8 bits, mask LSB data with 0xFF, and OR both bits.
-
-#ifdef DEBUG 
-  Serial.print("Register 0x");
-  Serial.print((unsigned char)regAddr, HEX);
-  Serial.print(" reads: ");
-  Serial.println(_dataOut);
-#endif
 
   return(_dataOut);
 }
@@ -125,73 +118,72 @@ int16_t ADIS16448::regRead(uint8_t regAddr) {
 ////////////////////////////////////////////////////////////////////////////////////////////
 int16_t * ADIS16448::sensorRead() {
 //Read registers using SPI
-  // Initialize sensor data array
+  // Initialize sensor data arrays and stall time variable
   uint8_t sensorData[18];
   int16_t joinedData[9];
-  // Write register address to be read
-  digitalWrite(_CS, LOW); // Set CS low to enable device
+  int stall = 25;
+
+  // Write each requested register address and read back it's data
+  digitalWrite(_CS, LOW); // Set CS low to enable communication with the device
   SPI.transfer(XGYRO_OUT); // Initial SPI read. Returned data for this transfer is invalid
   SPI.transfer(0x00); // Write 0x00 to the SPI bus fill the 16 bit transaction requirement
-  sensorData[0] = SPI.transfer(YGYRO_OUT); 
-  sensorData[1] = SPI.transfer(0x00); 
+  digitalWrite(_CS, HIGH); // Set CS high to disable communication with the device
+  delayMicroseconds(stall); // Delay to not violate read rate (40us)
+  digitalWrite(_CS, LOW);
+  sensorData[0] = SPI.transfer(YGYRO_OUT); // Write next address to device and read upper byte
+  sensorData[1] = SPI.transfer(0x00); // Read lower byte
+  joinedData[0] = (sensorData[0] << 8) | (sensorData[1] & 0xFF); // Concatenate two bytes into word
   digitalWrite(_CS, HIGH);
-  delayMicroseconds(20); // Delay to not violate read rate (40us)
+  delayMicroseconds(stall);
   digitalWrite(_CS, LOW);
   sensorData[2] = SPI.transfer(ZGYRO_OUT); 
   sensorData[3] = SPI.transfer(0x00); 
+  joinedData[1] = (sensorData[2] << 8) | (sensorData[3] & 0xFF);
   digitalWrite(_CS, HIGH);
-  delayMicroseconds(20); // Delay to not violate read rate (40us)
+  delayMicroseconds(stall); 
   digitalWrite(_CS, LOW);
   sensorData[4] = SPI.transfer(XACCL_OUT); 
   sensorData[5] = SPI.transfer(0x00); 
+  joinedData[2] = (sensorData[4] << 8) | (sensorData[5] & 0xFF);
   digitalWrite(_CS, HIGH);
-  delayMicroseconds(20); // Delay to not violate read rate (40us)
+  delayMicroseconds(stall); 
   digitalWrite(_CS, LOW);
   sensorData[6] = SPI.transfer(YACCL_OUT); 
   sensorData[7] = SPI.transfer(0x00); 
+  joinedData[3] = (sensorData[6] << 8) | (sensorData[7] & 0xFF);
   digitalWrite(_CS, HIGH);
-  delayMicroseconds(20); // Delay to not violate read rate (40us)
+  delayMicroseconds(stall);
   digitalWrite(_CS, LOW);
   sensorData[8] = SPI.transfer(ZACCL_OUT); 
   sensorData[9] = SPI.transfer(0x00); 
+  joinedData[4] = (sensorData[8] << 8) | (sensorData[9] & 0xFF);
   digitalWrite(_CS, HIGH);
-  delayMicroseconds(20); // Delay to not violate read rate (40us)
+  delayMicroseconds(stall); 
   digitalWrite(_CS, LOW);
   sensorData[10] = SPI.transfer(XMAGN_OUT); 
   sensorData[11] = SPI.transfer(0x00); 
+  joinedData[5] = (sensorData[10] << 8) | (sensorData[11] & 0xFF);
   digitalWrite(_CS, HIGH);
-  delayMicroseconds(20); // Delay to not violate read rate (40us)
+  delayMicroseconds(stall); 
   digitalWrite(_CS, LOW);
   sensorData[12] = SPI.transfer(YMAGN_OUT); 
   sensorData[13] = SPI.transfer(0x00); 
+  joinedData[6] = (sensorData[12] << 8) | (sensorData[13] & 0xFF);
   digitalWrite(_CS, HIGH);
-  delayMicroseconds(20); // Delay to not violate read rate (40us)
+  delayMicroseconds(stall); 
   digitalWrite(_CS, LOW);
   sensorData[14] = SPI.transfer(ZMAGN_OUT); 
   sensorData[15] = SPI.transfer(0x00); 
+  joinedData[7] = (sensorData[14] << 8) | (sensorData[15] & 0xFF);
   digitalWrite(_CS, HIGH);
-  delayMicroseconds(20); // Delay to not violate read rate (40us)
+  delayMicroseconds(stall); 
   digitalWrite(_CS, LOW);
-  sensorData[16] = SPI.transfer(FLASH_CNT); // Final transfer. Data after this DNC
+  sensorData[16] = SPI.transfer(FLASH_CNT); // Final transfer. Data after this invalid
   sensorData[17] = SPI.transfer(0x00);
-  digitalWrite(_CS, HIGH); // Set CS high to disable device
+  joinedData[8] = (sensorData[16] << 8) | (sensorData[17] & 0xFF);
+  digitalWrite(_CS, HIGH); 
 
-  // Concatenate upper and lower words
-  int j = 0;
-  for(int i = 0; i < 8; i++){
-    // Shift MSB data left by 8 bits, mask LSB data with 0xFF, and OR both bits.
-    joinedData[i] = (sensorData[j] << 8) | (sensorData[j+1] & 0xFF);
-    j = j + 2;
-  }
-  
-#ifdef DEBUG 
-  Serial.print("Register 0x");
-  Serial.print((unsigned char)regAddr, HEX);
-  Serial.print(" reads: ");
-  Serial.println(_dataOut);
-#endif
-
-  return(joinedData);
+  return(joinedData); // Return pointer with data
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -227,13 +219,6 @@ int ADIS16448::regWrite(uint8_t regAddr, int16_t regData) {
   SPI.transfer(highBytelowWord); // Write high byte from low word to SPI bus
   SPI.transfer(lowBytelowWord); // Write low byte from low word to SPI bus
   digitalWrite(_CS, HIGH); // Set CS high to disable device
-
-  #ifdef DEBUG
-    Serial.print("Wrote 0x");
-    Serial.println(regData);
-    Serial.print(" to register: 0x");
-    Serial.print((unsigned char)regAddr, HEX);
-  #endif
 
   return(1);
 }
