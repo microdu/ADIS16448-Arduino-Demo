@@ -1,15 +1,28 @@
 # ADIS16448 Arduino Demo
-### An Arduino demo written for the ADIS16448
+### An example C++ library and Arduino project for the ADIS16448 Ten Degrees of Freedom Inertial Sensor
 
-This simple demo project uses a custon C++ library to interface an ADIS16448 with a 3.3V Atmel-Based Arduino. 
+This example library was written to give engineers, students, and makers a starting point for using a high-performance, compact IMU. The code in this repository will provide the user with:
+- A header file listing all of the unit's available registers
+- Functions for reading output registers and writing control registers using **8-bit** frames
+- Functions for performing common routines such as resetting the sensor
+- Example Arduino sketches which synchronously read data from the sensor and write it to the serial port
 
-All required libraries and sketches are included with this release and the Arduino IDE. This example is written for Arduino 1.0.6.
+### What do I need to get started?
 
-More information on the hardware and IDE can be found below:
+In order to compile and execute the Arduino sketch, you'll need to download the "legacy" Arduino package (v1.0.6 as of this writing). You can download the IDE [here](http://arduino.cc/download.php?f=/arduino-1.0.6-windows.zip).
 
-- [ADIS16448](http://www.analog.com/media/en/technical-documentation/data-sheets/ADIS16448.pdf) - Compact, Precision Ten Degrees of Freedom Inertial Sensor
-- [Arduino](http://www.arduino.cc/en/Main/Software) - Open-source IDE
-- [Arduino Uno](http://www.arduino.cc/en/Main/ArduinoBoardUno) - ATmega328-based Development Board
-- [PuTTY](http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html) - Telnet and SSH for Windows and Unix Platforms
+You'll also need an 8-bit arduino such as an [Arduino Uno](http://www.arduino.cc/en/Main/ArduinoBoardUno).
 
-A hardware setup guide will be made available at a later date.
+### How do I install the library?
+
+Once you've installed the Arduino IDE, copy the ADIS16448 folder into `My Documents > Arduino > libraries`
+
+### How do I connect the IMU to my Arduino?
+
+**The ADIS16448 is a 3.3V part, so your Arduino must be modified before connecting the sensor to it! A guide to modifying an Arduino Uno can be found [here](https://learn.adafruit.com/arduino-tips-tricks-and-techniques/3-3v-conversion).**
+
+After modifying the Arduino, you'll need to build a cable to interface the sensor with the [ADIS16448/PCBZ](http://www.analog.com/en/design-center/evaluation-hardware-and-software/evaluation-boards-kits/eval-adis16448.html#eb-overview).
+
+![ADIS16448-Arduino Cable Interface](https://raw.githubusercontent.com/juchong/ADIS16448-Arduino-Demo/master/setup_pictures/IMG_4569.JPG)
+
+Pin assignments can be found in the Arduino sketch comments.
