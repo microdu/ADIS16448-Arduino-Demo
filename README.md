@@ -13,6 +13,8 @@ In order to compile and execute the Arduino sketch, you'll need to download the 
 
 You'll also need an 8-bit arduino such as an [Arduino Uno](http://www.arduino.cc/en/Main/ArduinoBoardUno).
 
+The Arduino sketches use commands which clear the terminal window. For best results, connect to your Arduino using [PuTTY](http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html), an open source terminal program.
+
 ### How do I install the library?
 
 Once you've installed the Arduino IDE, copy the ADIS16448 folder into `My Documents > Arduino > libraries`
@@ -26,3 +28,13 @@ After modifying the Arduino, you'll need to build a cable to interface the senso
 ![ADIS16448-Arduino Cable Interface](https://raw.githubusercontent.com/juchong/ADIS16448-Arduino-Demo/master/setup_pictures/IMG_4569.JPG)
 
 Pin assignments can be found in the Arduino sketch comments.
+
+### How do I know it's working?
+
+Once you have the sensor connected and have loaded the **ADIS16448_8bit_WithDR** example sketch, use PuTTY to connect to the arduino using the following settings:
+
+![ADIS16448 Example PuTTY Config](https://raw.githubusercontent.com/juchong/ADIS16448-Arduino-Demo/master/setup_pictures/PuTTYConfig.PNG)
+
+If everything is working, you should see a screen like this:
+
+![ADIS16448 Example PuTTY Output](https://raw.githubusercontent.com/juchong/ADIS16448-Arduino-Demo/master/setup_pictures/SampleOutput.PNG)
